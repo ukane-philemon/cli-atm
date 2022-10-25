@@ -1,2 +1,2 @@
 # cli-atm
-A simple CLI ATM Machine wiht minimal features.
+A simple CLI ATM Machine whit minimal features.
