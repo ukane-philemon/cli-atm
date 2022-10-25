@@ -2,8 +2,7 @@
 	ATM is a simple ATM machine cli program for the Alt_School third assignment that has the following features:
 
 	- create an account.
-	- change Pin (you can create a default pin in your code and then change it
-	  in the function)
+	- change Pin.
 	- check account balance
 	- withdraw funds
 	- deposit funds
@@ -49,7 +48,7 @@ func StartATM(args []string) error {
 	app.Usage = "A CLi ATM Machine with basic bank/ATM features."
 	app.Description = "This is an ATM Machine program that performs basic bank/ATM transactions. Note all amounts are in NGN."
 	app.Authors = []*cli.Author{{Name: "Philemon Ukane"}}
-	// A list of user accounts.
+	// Add a  default user account.
 	app.Metadata = map[string]interface{}{
 		"philemon": &account{
 			transactionPin: "1234",
@@ -58,7 +57,7 @@ func StartATM(args []string) error {
 	app.Commands = []*cli.Command{
 		{
 			Name:      "start",
-			Aliases:   []string{"atm", "s"},
+			Aliases:   []string{"s"},
 			Usage:     "To launch the CLI ATM Machine",
 			UsageText: "e.g start --pin=1234",
 			After:     performOtherTransaction,
@@ -284,7 +283,7 @@ func stringAmount(amount float64, currency string) string {
 
 // ReadArgs retrieves user input from the command-line.
 func ReadArgs() []string {
-	args := []string{"atm"}
+	args := []string{"cli-atm"}
 	scanner := bufio.NewScanner(os.Stdin)
 	var textInput string
 	for scanner.Scan() {
@@ -300,7 +299,7 @@ func ReadArgs() []string {
 
 	newArgs := make([]string, 0)
 	for _, arg := range strings.SplitAfter(textInput, " ") {
-		newArgs = append(newArgs, strings.Trim(arg, " "))
+		args = append(args, strings.Trim(arg, " "))
 	}
 
 	args = append(args, newArgs...)

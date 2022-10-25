@@ -8,9 +8,9 @@ import (
 )
 
 func main() {
-	fmt.Println("Enter the pin for the default account in this format, i.e: start --pin 1234")
 	args := os.Args
-	if len(args) < 2 {
+	if len(args) < 3 { // If the user provides some arguments, use it. Else prompt to start the ATM Machine.
+		fmt.Println("Enter the pin for the default account in this format, i.e: start --pin 1234")
 		args = atm.ReadArgs()
 	}
 
