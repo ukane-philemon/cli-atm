@@ -24,14 +24,19 @@ import (
 var (
 	// naira is the default and only supported currency.
 	naira = "NGN"
-	// amountFlag is on of the required command-line argument to process a
-	// deposit or withdrawal transaction.
+	// defaultAccount is a default account that can be used without creating an
+	// account.
+	defaultAccount = "philemon"
+	// defaultPIN is the password fore the default account above.
+	defaultPIN = "1234"
+	// amountFlag is on of the required command-line argument to
+	// process a deposit or withdrawal transaction.
 	amountFlag = []cli.Flag{&cli.Float64Flag{Name: "amount", Required: true, Usage: "Amount to deposit or withdraw."}}
 	// requiredFlags these are the command-line arguments to required to carry
 	// out a transaction on an account.
 	requiredFlags = []cli.Flag{
-		&cli.StringFlag{Name: "username", Value: "test", Required: true, Usage: "The username of the account."},
-		&cli.StringFlag{Name: "pin", Value: "1234", Required: true, Usage: "The transaction pin of the account."},
+		&cli.StringFlag{Name: "username", Required: true, Usage: "The username of the account."},
+		&cli.StringFlag{Name: "pin", Required: true, Usage: "The transaction pin of the account."},
 	}
 )
 
@@ -48,10 +53,11 @@ func StartATM(args []string) error {
 	app.Usage = "A CLi ATM Machine with basic bank/ATM features."
 	app.Description = "This is an ATM Machine program that performs basic bank/ATM transactions. Note all amounts are in NGN."
 	app.Authors = []*cli.Author{{Name: "Philemon Ukane"}}
-	// Add a  default user account.
+	// Add a default user account.
 	app.Metadata = map[string]interface{}{
-		"philemon": &account{
-			transactionPin: "1234",
+		defaultAccount: &account{
+			balance:        5006267,
+			transactionPin: defaultPIN,
 		},
 	}
 	app.Commands = []*cli.Command{
@@ -62,7 +68,7 @@ func StartATM(args []string) error {
 			UsageText: "e.g start --pin=1234",
 			After:     performOtherTransaction,
 			Action:    welcomeUser,
-			Flags:     []cli.Flag{&cli.StringFlag{Name: "pin", Value: "1234", Required: true, Usage: "The transaction pin of the default account."}},
+			Flags:     []cli.Flag{&cli.StringFlag{Name: "pin", Required: true, Usage: "The transaction pin of the default account."}},
 		},
 		{
 			Name:      "createaccount",
@@ -122,7 +128,24 @@ func StartATM(args []string) error {
 
 // welcomeUser prints a welcome message and displays app help message.
 func welcomeUser(c *cli.Context) error {
-	fmt.Fprintln(c.App.Writer, "Welcome to the CLI ATM Machine")
+	txPin := c.String("pin")
+	if txPin == "" {
+		fmt.Fprintln(os.Stderr, "transaction pin cannot be empty")
+		return nil
+	}
+
+	account, err := retrieveAndVerifyAccount(c, defaultAccount, txPin)
+	if err != nil {
+		fmt.Fprintln(os.Stderr, err)
+		return nil
+	}
+
+	fmt.Fprintln(c.App.Writer, "--------------------------------------")
+	fmt.Fprintf(c.App.Writer, "%s, Welcome to the CLI ATM Machine.\n\n", strings.ToUpper(defaultAccount))
+	fmt.Fprintf(c.App.Writer, "Your current balance is %s.\n", stringAmount(account.balance, naira))
+	fmt.Fprintln(c.App.Writer, "---------------------------------------")
+	fmt.Fprintln(c.App.Writer, "About the CLI ATM Machine and Commands")
+	fmt.Fprintln(c.App.Writer, "---------------------------------------")
 	return cli.ShowAppHelp(c)
 }
 
@@ -169,7 +192,8 @@ func depositToAccount(c *cli.Context) error {
 	}
 	account.balance += amount
 
-	fmt.Fprintf(os.Stdin, "Deposit to %s's account was successful. Your new balance is %s\n", username, stringAmount(account.balance, naira))
+	fmt.Fprintf(os.Stdin, "%s, the deposit to your account was successful.\nYour new balance is %s.\n",
+		strings.ToUpper(username), stringAmount(account.balance, naira))
 	return nil
 }
 
@@ -181,7 +205,8 @@ func withdrawFromAccount(c *cli.Context) error {
 	amount := c.Float64("amount")
 
 	if amount <= 0 {
-		return errors.New("withdrawal amount must be greater than zero")
+		fmt.Fprintln(os.Stderr, "withdrawal amount must be greater than zero")
+		return nil
 	}
 
 	account, err := retrieveAndVerifyAccount(c, username, txPin)
@@ -191,12 +216,14 @@ func withdrawFromAccount(c *cli.Context) error {
 	}
 
 	if account.balance < amount {
-		fmt.Fprintf(os.Stderr, "Sorry, your account balance is insufficient for this withdrawal. You have %s and want to withdraw %s. \n", stringAmount(account.balance, naira), stringAmount(amount, naira))
+		fmt.Fprintf(os.Stderr, "Sorry, your account balance is insufficient for this withdrawal.\nYou have %s and want to withdraw %s.\n",
+			stringAmount(account.balance, naira), stringAmount(amount, naira))
 		return nil
 	}
 	account.balance -= amount
 
-	fmt.Fprintf(os.Stdin, "Your withdrawal of %s has been concluded successfully. Your remaining balance is: %s\n", stringAmount(amount, naira), stringAmount(account.balance, naira))
+	fmt.Fprintf(os.Stdin, "%s, Your withdrawal of %s has been concluded successfully.\nYour remaining balance is: %s\n",
+		strings.ToUpper(username), stringAmount(amount, naira), stringAmount(account.balance, naira))
 	return nil
 }
 
@@ -211,7 +238,8 @@ func checkAccountBalance(c *cli.Context) error {
 		return nil
 	}
 
-	fmt.Fprintf(os.Stdin, "Your account balance is %s.\n", stringAmount(account.balance, naira))
+	fmt.Fprintf(os.Stdin, "%s, Your account balance is %s.\n",
+		strings.ToUpper(username), stringAmount(account.balance, naira))
 	return nil
 }
 
@@ -233,7 +261,8 @@ func changeAccountPin(c *cli.Context) error {
 	}
 	userAccount.transactionPin = newTxPin
 
-	fmt.Fprintln(os.Stdin, "Your transaction pin has been changed successfully.")
+	fmt.Fprintf(os.Stdin, "%s, Your transaction pin has been changed successfully.\n",
+		strings.ToUpper(username))
 	return nil
 }
 
@@ -264,8 +293,10 @@ func retrieveAndVerifyAccount(c *cli.Context, username, txPin string) (*account,
 
 // performOtherTransaction prompts the user to perform other transactions.
 func performOtherTransaction(c *cli.Context) error {
-	fmt.Println("Do you wish to perform other transactions? \nIf yes, provide the required arguments in the format below:\ndeposit ---amount=2000 --username=lemon --pin=1234")
+	fmt.Fprintln(c.App.Writer, "---------------------------------------")
+	fmt.Println("Do you wish to perform other transactions?\nIf yes, provide the required arguments in the format below:\ndeposit ---amount=2000 --username=lemon --pin=1234")
 	fmt.Println("If you don't wish to continue, exit the app with: logout")
+	fmt.Fprintln(c.App.Writer, "---------------------------------------")
 
 	args := ReadArgs()
 	if len(args) < 1 {
