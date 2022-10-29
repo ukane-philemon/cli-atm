@@ -12,4 +12,4 @@ To run you must have go installed and clone this repository on your terminal usi
 - `cd cli-atm`
 - Run `go build` then `./cli-atm` or run `go install` then `cli-atm`
 
-<img src="running-atm.png" width="400"></img>
+<img src="running_atm.png" width="400"></img>
