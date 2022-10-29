@@ -1,7 +1,6 @@
 # cli-atm
 ATM is a simple ATM machine cli program for the Alt_School third assignment that has the following features:
 
-	- Create an account.
 	- Change Pin.
 	- Check account balance.
 	- Withdraw funds.
@@ -12,4 +11,4 @@ To run you must have go installed and clone this repository on your terminal usi
 - `cd cli-atm`
 - Run `go build` then `./cli-atm` or run `go install` then `cli-atm`
 
-<img src="running_atm.png" width="400"></img>
+<img src="running-atm.png" width="400"></img>
